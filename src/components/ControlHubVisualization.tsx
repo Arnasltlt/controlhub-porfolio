@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import NetworkCapabilitiesView from './NetworkCapabilitiesView'; // Import the network capabilities component
+import RDAManagerView from './RDAManagerView'; // Import the RDA Manager component
+import RFQManagementView from './RFQManagementView'; // Import the RFQ Management component
+import ShippingToolView from './ShippingToolView'; // Import the Shipping Tool component
 // No need to import anime.js as it will be available globally from the CDN
 
 // Define the main color palette based on screenshots
@@ -10,7 +14,7 @@ const MOCK_COLORS = {
   primaryAccent: '#007BFF',   // Blue for buttons, links, highlights
   secondaryAccent: '#6C757D', // For icons or less prominent interactive elements
   textPrimary: '#343A40',    // Main text color, slightly softer than pure black
-  textSecondary: '#6C757D', // Secondary text color
+  textSecondary: '#4A4A4A', // Darkened from #6C757D for better text contrast
   border: '#DEE2E6',         // Borders and dividers
   cardBackground: '#F8F9FA', // Background for cards or distinct sections
   iconColor: '#ADB5BD',       // Default color for sidebar icons
@@ -31,13 +35,21 @@ interface Tool {
   iconPlaceholder: string;
   description?: string;
 }
+interface Scan {
+  id: number;
+  trackingNumber: string;
+  orderNumber: string;
+  message?: string;
+  scannedAt: string;
+}
 
 const tools: Tool[] = [
   { id: 'home', name: 'Home', iconPlaceholder: '⌂' }, // House symbol
   { id: 'shipping', name: 'Shipping Tool', iconPlaceholder: '⇥', description: 'Managed all shipping logistics...' }, // Right arrow
-  { id: 'quality', name: 'Quality Inspection', iconPlaceholder: '⚲', description: 'Standardized quality checks...' }, // Magnifier
   { id: 'network', name: 'Network Capabilities', iconPlaceholder: '◉', description: 'A dynamic directory of global manufacturing partner capabilities...' }, // Network dot
+  { id: 'rfq', name: 'RFQ Management', iconPlaceholder: '◎', description: 'Comprehensive system for managing Request for Quote processes and tracking quote statuses across the platform.' }, // Circle dot for RFQ
   { id: 'scanning', name: 'Warehouse Scanning', iconPlaceholder: '≣', description: 'Streamlined essential warehouse operations...' }, // Scanning lines
+  { id: 'rdamanager', name: 'RDA Manager', iconPlaceholder: '⚐', description: 'Centralized monitor for Request for Quote (RFQ) distribution auctions, allowing managers to track and assign orders across the manufacturing network.' }, // Flag symbol
   { id: 'settings', name: 'Settings', iconPlaceholder: '⚙', description: 'Centralized user preferences...' }, // Gear
 ];
 
@@ -49,6 +61,25 @@ export default function ControlHubVisualization() {
   const [chatMessage, setChatMessage] = useState<string>('');
   const [isChatVisible, setIsChatVisible] = useState<boolean>(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(false);
+
+  const [scans, setScans] = useState<Scan[]>([]);
+  const [currentSessionLocation, setCurrentSessionLocation] = useState<string>('Chicago');
+  const [currentTab, setCurrentTab] = useState<'current' | 'all' | 'messages'>('current');
+
+  const locations = ['Chicago', 'New York', 'Berlin', 'Tokyo'];
+
+  const generateRandomScan = (): Scan => {
+    const trackingNumber = 'TN-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    const orderNumber = 'ORD-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const messages = ['', 'Left package at front door', 'Customer requested delay', 'Signed by receiver'];
+    const message = messages[Math.floor(Math.random() * messages.length)];
+    const scannedAt = new Date().toLocaleString('default', {
+      month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    return { id: Date.now(), trackingNumber, orderNumber, message, scannedAt };
+  };
+  const addScan = () => setScans(prev => [...prev, generateRandomScan()]);
+  const startNewSession = () => setScans([]);
 
   // Initial message on mount & Effect for contextual chat messages
   useEffect(() => {
@@ -233,7 +264,39 @@ export default function ControlHubVisualization() {
     border: 'none',
     fontSize: '1.2em',
     cursor: 'pointer',
+  color: MOCK_COLORS.textSecondary,
+};
+  const tabStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    padding: '10px 15px',
+    cursor: 'pointer',
+    fontSize: '1em',
     color: MOCK_COLORS.textSecondary,
+  };
+  const activeTabStyle: React.CSSProperties = {
+    ...tabStyle,
+    color: MOCK_COLORS.textPrimary,
+    fontWeight: 600,
+    borderBottom: `2px solid ${MOCK_COLORS.primaryAccent}`,
+  };
+  const selectStyle: React.CSSProperties = {
+    padding: '8px 12px',
+    fontSize: '1em',
+    border: `1px solid ${MOCK_COLORS.border}`,
+    borderRadius: '4px',
+    backgroundColor: MOCK_COLORS.lightBackground,
+    color: MOCK_COLORS.textPrimary,
+    cursor: 'pointer',
+  };
+  const primaryButtonStyle: React.CSSProperties = {
+    padding: '10px 20px',
+    fontSize: '1em',
+    backgroundColor: MOCK_COLORS.primaryAccent,
+    color: MOCK_COLORS.lightBackground,
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
   };
 
   // Function to handle clicking on a recently searched item
@@ -452,14 +515,97 @@ export default function ControlHubVisualization() {
           </div>
         )}
 
-        {activeTool.id !== 'home' && (
+        {activeTool.id === 'scanning' && (
+          <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex' }}>
+                <button onClick={() => setCurrentTab('current')} style={currentTab === 'current' ? activeTabStyle : tabStyle}>
+                  Current session
+                </button>
+                <button onClick={() => setCurrentTab('all')} style={currentTab === 'all' ? activeTabStyle : tabStyle}>
+                  All scans
+                </button>
+                <button onClick={() => setCurrentTab('messages')} style={currentTab === 'messages' ? activeTabStyle : tabStyle}>
+                  Messages
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <select value={currentSessionLocation} onChange={e => setCurrentSessionLocation(e.target.value)} style={selectStyle}>
+                  {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                </select>
+                <button onClick={startNewSession} style={primaryButtonStyle}>Start new session</button>
+              </div>
+            </div>
+            {currentTab === 'current' && (
+              <div style={{ flexGrow: 1, overflowY: 'auto', cursor: 'pointer' }} onClick={addScan}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${MOCK_COLORS.border}`, color: MOCK_COLORS.textSecondary, textAlign: 'left' }}>
+                      <th style={{ padding: '12px' }}>Order number</th>
+                      <th style={{ padding: '12px' }}>Message</th>
+                      <th style={{ padding: '12px' }}>Scanned</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scans.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ padding: '20px', textAlign: 'center', color: MOCK_COLORS.textSecondary }}>
+                          No scans in this session
+                        </td>
+                      </tr>
+                    ) : (
+                      scans.map(scan => (
+                        <tr key={scan.id}>
+                          <td style={{ padding: '12px', color: MOCK_COLORS.textPrimary }}>{scan.orderNumber}</td>
+                          <td style={{ padding: '12px', color: MOCK_COLORS.textPrimary }}>{scan.message || '-'}</td>
+                          <td style={{ padding: '12px', color: MOCK_COLORS.textPrimary }}>{scan.scannedAt}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {currentTab === 'all' && (
+              <div style={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', color: MOCK_COLORS.textSecondary }}>
+                All scans view mockup.
+              </div>
+            )}
+            {currentTab === 'messages' && (
+              <div style={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', color: MOCK_COLORS.textSecondary }}>
+                Messages view mockup.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Render NetworkCapabilitiesView when activeTool.id is 'network' */}
+        {activeTool.id === 'network' && (
+          <NetworkCapabilitiesView />
+        )}
+
+        {/* Render RDAManagerView when activeTool.id is 'rdamanager' */}
+        {activeTool.id === 'rdamanager' && (
+          <RDAManagerView />
+        )}
+
+        {/* Render RFQManagementView when activeTool.id is 'rfq' */}
+        {activeTool.id === 'rfq' && (
+          <RFQManagementView />
+        )}
+
+        {/* Render ShippingToolView when activeTool.id is 'shipping' */}
+        {activeTool.id === 'shipping' && (
+          <ShippingToolView />
+        )}
+
+        {/* Placeholder for other tools - ensure this doesn't conflict */}
+        {activeTool.id !== 'home' && activeTool.id !== 'scanning' && activeTool.id !== 'network' && activeTool.id !== 'rdamanager' && activeTool.id !== 'rfq' && activeTool.id !== 'shipping' && (
           <div>
             <h1 style={{ fontSize: '2.2em', color: MOCK_COLORS.textPrimary, marginBottom: '20px', fontWeight: 600 }}>
               {activeTool.name}
             </h1>
-            {/* Static description removed, will be driven by chat bubble */}
             <p style={{color: MOCK_COLORS.textSecondary, lineHeight: 1.7, fontSize: '1.1em'}}>
-              {/* This paragraph can now be a placeholder for the actual tool's UI mock, if any */}
               Mock UI for {activeTool.name} will be shown here.
             </p>
           </div>
